@@ -5,25 +5,42 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
-import React, { useLayoutEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
-import { Attractions, Avatar, Hotels, Restaurants } from "../assets";
+import { Attractions, Avatar, Hotels, NotFound, Restaurants } from "../assets";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import MenuContainer from "../components/MenuContainer";
 import { FontAwesome } from "@expo/vector-icons";
 import ItemCardContainer from "../components/ItemCardContainer";
+import { getPlacesData } from "../api";
 
 const Discover = () => {
   const navigation = useNavigation();
   const [type, settype] = useState("restaurants");
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [mainData, setMainData] = useState([]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: false,
     });
   }, []);
+
+  useEffect(() => {
+    setIsLoading(true);
+    getPlacesData().then((data) => {
+      setMainData(data);
+      setInterval(() => {
+        setIsLoading(false);
+      }, 2000);
+    });
+  }, []);
+
   return (
     <SafeAreaView className='flex-1 bg-white relative'>
       <View className='flex-row items-center justify-between px-8 mt-6'>
@@ -53,62 +70,85 @@ const Discover = () => {
           }}
         />
       </View>
-      <ScrollView>
-        <View className='flex-row items-center justify-between px-8 mt-8'>
-          <MenuContainer
-            key={"hotel"}
-            title='Hotel'
-            imageSrc={Hotels}
-            type={type}
-            setType={settype}
-          />
-          <MenuContainer
-            key={"attractions"}
-            title='Attractions'
-            imageSrc={Attractions}
-            type={type}
-            setType={settype}
-          />
-          <MenuContainer
-            key={"restaurants"}
-            title='Restaurants'
-            imageSrc={Restaurants}
-            type={type}
-            setType={settype}
-          />
+      {isLoading ? (
+        <View className='flex-1 items-center justify-center'>
+          <ActivityIndicator size='large' color='#0B646B' />
         </View>
-        <View>
-          <View className='flex-row items-center justify-between px-4 mt-8'>
-            <Text className='text-[#2C7379] text-[28px] font-bold'>
-              Top Tips
-            </Text>
-            <TouchableOpacity className='flex-row items-center justify-center space-x-2'>
-              <Text className='text-[#A0C4C7] text-[20px] font-bold'>
-                Explore
+      ) : (
+        <ScrollView>
+          <View className='flex-row items-center justify-between px-8 mt-8'>
+            <MenuContainer
+              key={"hotel"}
+              title='Hotel'
+              imageSrc={Hotels}
+              type={type}
+              setType={settype}
+            />
+            <MenuContainer
+              key={"attractions"}
+              title='Attractions'
+              imageSrc={Attractions}
+              type={type}
+              setType={settype}
+            />
+            <MenuContainer
+              key={"restaurants"}
+              title='Restaurants'
+              imageSrc={Restaurants}
+              type={type}
+              setType={settype}
+            />
+          </View>
+          <View>
+            <View className='flex-row items-center justify-between px-4 mt-8'>
+              <Text className='text-[#2C7379] text-[28px] font-bold'>
+                Top Tips
               </Text>
-              <FontAwesome name='long-arrow-right' size={24} color='#A0C4C7' />
-            </TouchableOpacity>
+              <TouchableOpacity className='flex-row items-center justify-center space-x-2'>
+                <Text className='text-[#A0C4C7] text-[20px] font-bold'>
+                  Explore
+                </Text>
+                <FontAwesome
+                  name='long-arrow-right'
+                  size={24}
+                  color='#A0C4C7'
+                />
+              </TouchableOpacity>
+            </View>
+            <View className='px-4 mt-8 flex-row items-center justify-evenly flex-wrap'>
+              {mainData?.length > 0 ? (
+                <>
+                  {mainData?.map((data, i) => (
+                    <ItemCardContainer
+                      key={i}
+                      imageSrc={
+                        data?.photo?.images?.medium?.url
+                          ? data?.photo?.images?.medium?.url
+                          : "https://cdn.pixabay.com/photo/2015/10/30/12/22/eat-1014025_1280.jpg"
+                      }
+                      title={data?.name}
+                      location={data?.location_string}
+                      data={data}
+                    />
+                  ))}
+                </>
+              ) : (
+                <>
+                  <View className='w-full h-[400px] items-center space-y-8 justify-center'>
+                    <Image
+                      source={NotFound}
+                      className='w-32 h-32 object-cover'
+                    />
+                    <Text className='text-2xl text-[#42822 font-semibold'>
+                      Opps... No Data Found
+                    </Text>
+                  </View>
+                </>
+              )}
+            </View>
           </View>
-          <View className='px-4 mt-8 flex-row items-center justify-evenly flex-wrap'>
-            <ItemCardContainer
-              key={"101"}
-              imageSrc={
-                "https://cdn.pixabay.com/photo/2023/03/28/17/34/girl-7883816_960_720.jpg"
-              }
-              title='Something very big'
-              location='Doha'
-            />
-            <ItemCardContainer
-              key={"102"}
-              imageSrc={
-                "https://cdn.pixabay.com/photo/2015/03/03/08/55/portrait-657116_960_720.jpg"
-              }
-              title='Another'
-              location='Dubai'
-            />
-          </View>
-        </View>
-      </ScrollView>
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
